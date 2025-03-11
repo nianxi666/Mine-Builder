@@ -275,9 +275,17 @@ def analyze_images_and_voxel_with_key(api_key):
         if not os.path.exists(working_file):
             print(f"配置文件生成失败！(Configuration file generation failed!)")
             return None
+
+        # 将 working.txt 同时保存到 output 文件夹（如果有同名则覆盖）
+        output_working_file = os.path.join(OUTPUT_DIR, "working.txt")
+        try:
+            shutil.copy2(working_file, output_working_file)
+            print(f"工作文件也已保存到output文件夹：{output_working_file} (Working file also saved to output folder: {output_working_file})")
+        except Exception as e:
+            print(f"保存工作文件到output文件夹失败：{e} (Failed to save working file to output folder: {e})")
         
         print(f"AI分析完成，配置文件: {working_file} (AI analysis completed, configuration file: {working_file})")
-        return working_file
+        return output_working_file
     except Exception as e:
         print(f"AI分析过程出错：{str(e)} (AI analysis process failed: {str(e)})")
         return None
