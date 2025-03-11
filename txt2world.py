@@ -23,16 +23,17 @@ def load_and_convert():
     
     if not os.path.exists(input_file):
         print(f"未找到文件: {input_file}")
-        return
+        return False
     
     with open(input_file, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # 可在此处添加转换逻辑
+    # 此处可添加额外的转换逻辑
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(content)
     
     print(f"已将 {input_file} 转换为 {output_file}。")
+    return True
 
 def send_commands():
     """
@@ -64,7 +65,7 @@ def update_map_and_zip():
         os.makedirs(output_dir)
     
     while True:
-        # 模拟生成服务器地图内容，这里简单使用当前时间
+        # 模拟生成服务器地图内容，这里简单使用当前时间作为示例
         map_content = f"服务器地图更新时间: {time.ctime()}\n"
         map_file = "server_map.txt"
         
@@ -80,7 +81,7 @@ def update_map_and_zip():
         
         print(f"已将服务器地图压缩为: {zip_filename}")
         
-        # 等待 60 秒后更新
+        # 等待 60 秒后再次更新
         time.sleep(60)
 
 def main():
@@ -93,11 +94,9 @@ def main():
     map_thread.start()
     
     # 自动加载 working.txt 并转换为 commands.txt
-    load_and_convert()
-    
-    # 等待用户按下回车键发送命令
-    input("按下回车键，一键发送命令到服务器...")
-    send_commands()
+    if load_and_convert():
+        # 加载完成后自动发送命令
+        send_commands()
     
     # 保持主线程运行（按 Ctrl+C 退出）
     print("程序正在运行，按 Ctrl+C 退出。")
