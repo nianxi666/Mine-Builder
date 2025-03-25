@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import sys
 import json
 import atexit
 import shutil
@@ -7,13 +8,18 @@ import time
 import glob
 import torch
 import re
+import subprocess
 from pathlib import Path
 import argparse
 from PIL import Image
-from mmgp import offload
+import trimesh
 from Voxelization import load_block_colors, ModelViewer
 from aieditor import analyze_images_and_voxel_with_key, make_openrouter_api_call
 import nbt.nbt
+from hy3dgen.text2image import HunyuanDiTPipeline
+from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline, FaceReducer, FloaterRemover, DegenerateFaceRemover
+from hy3dgen.texgen import Hunyuan3DPaintPipeline
+from hy3dgen.rembg import BackgroundRemover
 
 # 检查是否在 Notebook 环境中运行
 try:
@@ -28,12 +34,12 @@ API_KEY_PATH = 'api_key.json'
 SAVE_DIR = 'cache'
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
 OUTPUT_DIR = os.path.join(CURRENT_DIR, 'output')
-PROFILE = 5
-VERBOSE = 1
+ASSETS_DIR = os.path.join(CURRENT_DIR, 'assets')
 
 # 创建输出目录
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(SAVE_DIR, exist_ok=True)
+os.makedirs(ASSETS_DIR, exist_ok=True)
 
 # 全局加载 blockids.json
 block_colors = load_block_colors(BLOCK_COLORS_PATH)
@@ -70,7 +76,6 @@ def cleanup_glb_files():
         except Exception as e:
             print(f"删除GLB文件 {glb_file} 时出错：{e}")
 
-# 注册程序退出时的清理函数
 atexit.register(cleanup_image_files)
 
 def save_api_key(api_key):
@@ -115,18 +120,39 @@ def export_mesh(mesh, save_folder, textured=False):
         temp_path = os.path.join(save_folder, f'white_mesh.glb')
         output_path = os.path.join(OUTPUT_DIR, f'white_mesh_{int(time.time())}.glb')
     
-    mesh.export(temp_path, include_normals=textured)
+    mesh.export(temp_path)
     shutil.copy2(temp_path, output_path)
     print(f"模型导出到：{output_path}")
     return output_path
 
+def ensure_u2net_model():
+    """检查并确保 u2net.onnx 文件存在"""
+    u2net_dir = "/root/.u2net"
+    u2net_path = os.path.join(u2net_dir, "u2net.onnx")
+    
+    if not os.path.exists(u2net_path):
+        print(f"u2net.onnx 未找到，正在创建目录并下载...")
+        os.makedirs(u2net_dir, exist_ok=True)
+        url = "https://hf-mirror.com/tomjackson2023/rembg/resolve/main/u2net.onnx"
+        try:
+            subprocess.run(["wget", "--trust-server-names", "-L", url, "-O", u2net_path], check=True)
+            print(f"成功下载 u2net.onnx 到 {u2net_path}")
+        except subprocess.CalledProcessError as e:
+            print(f"下载 u2net.onnx 失败: {e}")
+            return False
+    else:
+        print(f"检测到 u2net.onnx 已存在于 {u2net_path}")
+    return True
+
 def setup_hunyuan_model():
-    """初始化Hunyuan模型"""
+    """初始化所有Hunyuan模型"""
     global t2i_worker, i23d_worker, texgen_worker, rmbg_worker, FloaterRemover, DegenerateFaceRemover, FaceReducer
-    print(f"正在加载Hunyuan模型...")
+    print(f"正在加载所有Hunyuan模型...")
+    
+    if not ensure_u2net_model():
+        print("无法获取 u2net.onnx，背景移除功能可能受限")
     
     try:
-        from hy3dgen.texgen import Hunyuan3DPaintPipeline
         texgen_worker = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2')
         print(f"纹理生成器加载成功")
     except Exception as e:
@@ -134,41 +160,22 @@ def setup_hunyuan_model():
         texgen_worker = None
 
     try:
-        from hy3dgen.text2image import HunyuanDiTPipeline
         t2i_worker = HunyuanDiTPipeline('Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled')
         print(f"文本到图像模型加载成功")
     except Exception as e:
         print(f"加载文本到图像模型失败: {e}")
         t2i_worker = None
 
-    from hy3dgen.shapegen import FaceReducer as FR, FloaterRemover as FLR, DegenerateFaceRemover as DFR
-    from hy3dgen.rembg import BackgroundRemover
-    from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
-
     rmbg_worker = BackgroundRemover()
-    i23d_worker = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2', device="cpu", use_safetensors=True)
-    FloaterRemover = FLR
-    DegenerateFaceRemover = DFR
-    FaceReducer = FR
+    i23d_worker = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2', use_safetensors=True)
+    FloaterRemover = FloaterRemover
+    DegenerateFaceRemover = DegenerateFaceRemover
+    FaceReducer = FaceReducer
 
-    pipe = offload.extract_models("i23d_worker", i23d_worker)
-    if texgen_worker:
-        pipe.update(offload.extract_models("texgen_worker", texgen_worker))
-        texgen_worker.models["multiview_model"].pipeline.vae.use_slicing = True
-    if t2i_worker:
-        pipe.update(offload.extract_models("t2i_worker", t2i_worker))
-
-    kwargs = {}
-    if PROFILE < 5:
-        kwargs["pinnedMemory"] = "i23d_worker/model"
-    if PROFILE != 1 and PROFILE != 3:
-        kwargs["budgets"] = {"*": 2200}
-
-    offload.profile(pipe, profile_no=PROFILE, verboseLevel=VERBOSE, **kwargs)
-    print("模型加载完成")
+    print("所有模型加载完成")
 
 def generate_3d_model(prompt, seed=None):
-    """生成3D模型，使用全局模型实例"""
+    """生成3D模型"""
     print(f"正在生成3D模型，提示词: {prompt}")
     
     if seed is None or seed == "":
@@ -193,7 +200,7 @@ def generate_3d_model(prompt, seed=None):
             print(f"文本生成图像失败: {e}")
             return None
     else:
-        print(f"文本到图像模型未加载，无法生成图像")
+        print(f"文本到图像模型未加载")
         return None
     
     print(f"正在移除图像背景...")
@@ -353,23 +360,23 @@ def text_to_schematic(input_file, prompt, seed):
     return output_file
 
 def check_existing_models(skip=False):
-    """检查output文件夹中是否已有.glb模型文件，根据skip参数决定行为"""
+    """检查output文件夹中是否已有.glb模型文件"""
     glb_files = glob.glob(os.path.join(OUTPUT_DIR, "*.glb"))
     if glb_files:
         if skip:
-            print(f"发现现有模型文件：{glb_files[0]}，由于指定 -skip，跳过Hunyuan模型生成")
+            print(f"发现现有模型文件：{glb_files[0]}，跳过生成")
             return glb_files[0]
         else:
-            print(f"发现现有模型文件：{glb_files[0]}，正在删除以生成新模型")
+            print(f"发现现有模型文件：{glb_files[0]}，正在删除")
             try:
                 os.remove(glb_files[0])
-                print(f"已删除现有模型文件：{glb_files[0]}")
+                print(f"已删除：{glb_files[0]}")
             except Exception as e:
-                print(f"删除现有模型文件 {glb_files[0]} 失败：{e}")
+                print(f"删除失败 {glb_files[0]}：{e}")
     return None
 
 def get_user_input(prompt_text):
-    """获取用户输入，支持终端和Notebook环境"""
+    """获取用户输入"""
     if IN_NOTEBOOK:
         from IPython.display import display
         from ipywidgets import Text, Button
@@ -412,7 +419,7 @@ def run_generation(prompt, seed, api_key, skip_existing, ask_key=True):
         if not api_key:
             api_key = load_api_key()
             if not api_key:
-                print(f"警告：未提供API密钥，且本地未找到密钥，将尝试继续运行")
+                print(f"警告：未提供API密钥，且本地未找到密钥")
     
     if not seed or seed == "":
         seed = str(int(time.time()) % 10000)
@@ -468,45 +475,40 @@ def main(args):
     """主函数"""
     global t2i_worker, i23d_worker, texgen_worker, rmbg_worker, FloaterRemover, DegenerateFaceRemover, FaceReducer
     
-    # 从命令行获取参数，若未提供则设为 None
+    setup_hunyuan_model()
+    
+    if not t2i_worker or not i23d_worker or not rmbg_worker or not FloaterRemover or not DegenerateFaceRemover or not FaceReducer:
+        print("错误：模型加载失败")
+        return
+    
     prompt = args.prompt if args.prompt else None
     api_key = args.key if args.key else None
     seed = args.seed if args.seed else ""
     skip_existing = args.skip
     
-    # 加载模型（仅一次）
-    setup_hunyuan_model()
-    
-    if not t2i_worker or not i23d_worker or not rmbg_worker or not FloaterRemover or not DegenerateFaceRemover or not FaceReducer:
-        print("错误：模型加载失败，程序退出")
-        return
-    
-    # 如果命令行未提供 prompt，则询问
     if not prompt:
         prompt = get_user_input("请输入生成3D模型的提示词：")
     
-    # 首次运行
     success, api_key = run_generation(prompt, seed, api_key, skip_existing, ask_key=(not args.key))
     
     if not success:
-        print("首次运行失败，程序退出")
+        print("首次运行失败")
         return
     
-    # 交互循环
     while True:
         user_input = get_user_input("是否继续运行？请输入新的提示词（按回车继续），或 'exit' 退出：")
         
         if user_input.lower() == 'exit':
-            print("用户选择退出，程序结束")
+            print("用户选择退出")
             break
         
         if not user_input:
-            print("提示词不能为空，请重新输入")
+            print("提示词不能为空")
             continue
         
         success, api_key = run_generation(user_input, "", api_key, skip_existing, ask_key=False)
         if not success:
-            print("生成失败，将继续询问用户是否继续")
+            print("生成失败，继续询问用户")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Minecraft 3D模型生成工具")
