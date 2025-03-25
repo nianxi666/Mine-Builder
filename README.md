@@ -2,20 +2,20 @@
  然而，想象是美好的，现实是残酷的，才怪，因为网上有很多现成的开源文本到3d的模型，比如hunyuan3d，可以生成非常高质量的模型，它的原理就会首先通过ai生成一张图片，然后根据图片生成3d模型，最后给3d模型生成纹理。我要做的就是用python写一个映射软件，并且使用ai的function calling来实现ai智能映射，gemini的多模态功能非常强悍，识图功能遥遥领先，而且ai studio的Gemini还免费，用来ai映射实在是太合适不过了。
  但是这一条龙下来，少说都得24g显存，考虑到也不是人人都有大显存的显卡，我决定弄出一个长期免费白嫖的方案，比如在免费的云电脑上面运行。但是colab只有16g不到，而kaggle也只有16g显存，hunyuan3d-2的官方文档说至少要25g显存，于是我决定部署一个优化版本的hunyuan3d，它的原理其实就是把显存的压力转移到了内存上，只要内存足够就可以了，而colab只有12g内存，比显存还少，于是我首先写了一个启智社区版本的项目，后续会上传更多免费的平台方案。
  
-简洁的简介：通过自然语言生成Minecraft建筑！ 本工具链实现从文本描述→AI生成3D模型→自动体素化→Minecraft Schematic文件的全流程自动化。
+简洁的简介：通过自然语言生成Minecraft建筑， 本工具链实现从文本描述→AI生成3D模型→自动体素化→Minecraft Schematic文件的全流程自动化。
 
- 核心亮点
-- 多模态AI集成：融合Hunyuan3D-2图像生成与Gemini语言模型
-- 工业级优化：支持Octree体素化（最高32x32x32分辨率）
-- 智能材质映射：基于python的高级颜色匹配算法
-- 多端兼容：输出标准Schematic格式，兼容Java版我的世界
+放demo
+提示词“a ship”
+![IMG_20250325_152339|457x499](upload://3iqJXwiG46GA7TtpSHz8CxYzfgO.jpeg)
+安装教程
+
 白嫖云端显卡一键部署（推荐）
 1.启智社区免费算力平台（支持手机访问）
 没有账号先注册：
 （带aff）
 注册地址：https://openi.pcl.ac.cn/user/sign_up?sharedUser=NewestAI
 #AFF 
-每天至少可以免费用5个小时，如果运行不超过30分钟就关机不计时长，相当于无限白嫖，并且数据可以保留，比colab强太多。
+每天至少可以免费用5个小时，相当于白嫖，并且数据可以保留，比colab强太多，后续会更新更多可白嫖的平台。
 首先访问我的项目地址：
 https://openi.pcl.ac.cn/NewestAI/Mine-Builder
 然后下滑找到一键运行云脑任务模板
@@ -29,6 +29,12 @@ https://openi.pcl.ac.cn/NewestAI/Mine-Builder
 ![IMG_20250323_110801|542x500](upload://byjCwOA97KOXQntQotyfiOfNDFJ.jpeg)
 输入source install.sh并回车就可以一键自动部署了，第一次部署耗时比较久，之后就很快了，如果途中终端莫名其妙消失了，重新打开一次终端再运行就好了。
 本地部署（不推荐）
+
+ 系统要求
+- NVIDIA GPU (推荐RTX 2060)
+- CUDA 11.8
+- RAM ≥25GB(windows)
+- 安装教程
 bash
 git clone https://github.com/nianxi666/Mine-Builder
 cd Mine-Builder
@@ -40,31 +46,22 @@ cd ../../..
 cd hy3dgen/texgen/differentiable_renderer
 python3 setup.py install
 使用教程
-
-
- 功能特性
- 核心流程
-1. 文本到图像生成  
-   - 支持HunyuanDiT/Stable Diffusion（暂不）多模型切换
-
-2. 3D建模优化  
-   python
-    包含的优化处理器
-   - FloaterRemover()   浮点消除
-   - DegenerateFaceRemover()   畸形面修复
-   - FaceReducer()   多边形精简
-
-3. 智能材质系统
-   json
-   "block_mapping": {
-     "stone": "minecraft:stone", "minecraft:cobblestone",
-     "glass": "minecraft:stained_glass:15", "minecraft:glass"
-   }
-
- 本地安装（不推荐）
- 系统要求
-- NVIDIA GPU (推荐RTX 2060)
-- CUDA 11.8
-- RAM ≥25GB(windows)
-- 云端部署（推荐）
-- 
+（启智社区篇）
+首先输入提示词按回车，例如Beautiful house
+然后他会问你要openrouter的api key
+进入openrouter的官网去白嫖一个就好了
+https://openrouter.ai/settings/keys
+最后等待推理完，去屏幕左边的文件管理，生成的schematic在mine-builder/output文件夹里
+![IMG_20250325_163419|690x480](upload://60MdzHd7Vo8AzpSlIGux6EHNI3T.jpeg)
+，把生成好的schematic文件下载下来，可以用worldedit模组导入到我的世界
+先把.schematic文件移动到这个路径：
+你的mc目录/config/worldedit/schematics/
+然后在游戏聊天框输入加载schematic的命令
+//schematic load 文件名.schematic
+![output (1)|535x240](upload://ezVVHw1298MNkDqUF4mlPKSZrQt.gif)
+最后用//paste命令放置出来
+![output|535x240](upload://zDMDrdO2J8USCjOzp4JibdMOYid.gif)
+本地版：
+输入python infer.py然后回车即可运行，输出结果保存在Mine-Builder/output文件夹。
+最后别忘了去github，给我的项目按个心
+https://github.com/nianxi666/Mine-Builder
