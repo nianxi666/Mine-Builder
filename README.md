@@ -31,9 +31,11 @@
 
 ## 视频教程（点击以下图片播放）
 [![Watch the video](https://img.youtube.com/vi/KD9u1QGffM4/hqdefault.jpg)](https://www.youtube.com/watch?v=KD9u1QGffM4)
-## Demo
-
+## 更多Demo
 提示词：“a ship”
+
+## 更多Demo
+https://www.youtube.com/watch?app=desktop&v=KD9u1QGffM4
 
 ![A ship](IMG_20250325_152339.jpg)
 
