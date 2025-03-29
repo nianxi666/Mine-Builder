@@ -1,5 +1,4 @@
 这个项目是我用半年时间，在手机上完成的。它能够通过自然语言生成 Minecraft 建筑，实现从文本描述到 AI 生成 3D 模型，再到自动体素化，最终生成 Minecraft Schematic 文件的全流程自动化。
-[![Watch the video](https://img.youtube.com/vi/KD9u1QGffM4/hqdefault.jpg)](https://www.youtube.com/watch?v=KD9u1QGffM4)
 ## 项目背景
 
 我从小就沉迷于 Minecraft，初中开始在 YouTube 上观看国外视频自学 Python。虽然时间有限，只学到了一些零散的知识，但我更喜欢折腾系统。初中时，我与 Python 的接触时间非常少，后来电脑也被我折腾坏了。我只能在手机上勉强自学编程。Termux 对 Python 的兼容性很差，我只能使用 Colab 和 Kaggle 运行 Python 环境，后来我逐渐爱上了机器学习。
@@ -30,6 +29,8 @@
 
 通过自然语言生成 Minecraft 建筑，本工具链实现从文本描述到 AI 生成 3D 模型，再到自动体素化，最后生成 Minecraft Schematic 文件的全流程自动化。
 
+## 视频教程（点击以下图片播放）
+[![Watch the video](https://img.youtube.com/vi/KD9u1QGffM4/hqdefault.jpg)](https://www.youtube.com/watch?v=KD9u1QGffM4)
 ## Demo
 
 提示词：“a ship”
