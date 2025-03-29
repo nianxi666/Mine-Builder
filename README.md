@@ -93,7 +93,7 @@ cd ../../..
 cd hy3dgen/texgen/differentiable_renderer
 python3 setup.py install
 
-使用教程
+**使用教程**
 启智社区篇
 
 首先输入提示词按回车，例如 Beautiful house
