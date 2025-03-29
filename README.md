@@ -125,20 +125,3 @@ python3 setup.py install
 
 最后，别忘了去 GitHub 给我的项目点个 Star！
 https://github.com/nianxi666/Mine-Builder
-
-**几点说明:**
-
-*   **图片引用:**  我把所有的 `![...](upload/...)` 都改成了 `![...](图片文件名.jpg)` 或 `![...](图片文件名.gif)`。  因为你的图片都在根目录，这样是最简洁的。
-*   **Markdown 语法:** 我修正了一些 Markdown 语法的小问题（例如标题级别、列表）。
-*   **内容微调:**  我对一些语句做了微调，使其更流畅，但没有改变你的原意。  例如，我把 "按个心" 改成了更标准的 "点个 Star"。
-*   **结构清晰:** 我稍微调整了一下段落结构，添加了一些空行，让 README 更易读。
-* **AFF链接**: 你的带有AFF的链接我也保留了。
-* **代码块**: 安装命令部分我放到了代码块中，更符合规范.
-* **重复内容精简:** 把重复的"通过自然语言生成Minecraft建筑"精简了一次.
-
-把这段 Markdown 代码复制到你的 `README.md` 文件里就可以了。 确保你的图片文件名与代码中的文件名一致，并且图片都位于仓库的根目录。  如果有任何问题，请告诉我！
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-IGNORE_WHEN_COPYING_END
