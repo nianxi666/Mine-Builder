@@ -92,6 +92,7 @@ python3 setup.py install
 cd ../../..
 cd hy3dgen/texgen/differentiable_renderer
 python3 setup.py install
+```
 
 **使用教程**
 启智社区篇
